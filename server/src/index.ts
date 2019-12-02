@@ -1,11 +1,12 @@
 import * as express from "express";
-import { Request, Response, ParamsDictionary } from "express-serve-static-core";
+import { Request, Response, ParamsDictionary, RequestHandler } from "express-serve-static-core";
 import bodyParser = require("body-parser");
+import { NextFunction } from "connect";
 
 const app: express.Express = express()
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-const port = 3000
+const port = 3003
 
 let todos = [1, 2, 3, 4, 5].map(id => ({
   userId: id,
@@ -44,14 +45,19 @@ export interface POST {
 const get = <P extends keyof GET>(
   path: P,
   app: express.Express,
-  callback: (req: Request<ParamsDictionary, GET[P]['res'], {}>, res: Response<GET[P]['res']>) => void
-) => app.get(path, callback)
+  ...handlers: Array<RequestHandler<ParamsDictionary, GET[P]['res'], null>>
+) => app.get(path, handlers)
 
 const post = <P extends keyof POST>(
   path: P,
   app: express.Express,
-  callback: (req: Request<ParamsDictionary, POST[P]['res'], POST[P]['req']>, res: Response<POST[P]['res']>) => void
-) => app.post(path, callback)
+  ...handlers: Array<RequestHandler<ParamsDictionary, POST[P]['res'], POST[P]['req']>>
+) => app.post(path, handlers)
+
+app.use((req: Request<ParamsDictionary, unknown, unknown>, _res: Response<unknown>, next: NextFunction) => {
+  console.log('Authorization:', req.headers.authorization)
+  next()
+})
 
 get('/todos', app, (_, res) => {
   res.send(todos)
